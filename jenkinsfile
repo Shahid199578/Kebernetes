@@ -56,7 +56,7 @@ pipeline {
             steps {
                 script {
                     def kubectl = tool 'kubectl'
-                    sh "${kubectl} apply -f kubernetes-deployment.yaml"
+                    sh "${kubectl} apply -f kubernetes-deployment.yaml --set DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME}"
                 }
             }
         }

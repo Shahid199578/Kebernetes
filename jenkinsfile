@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+    tools {
+        
+        maven 'Maven-Tool'
+        
+      }
+    environment {
+        DOCKER_HUB_CREDENTIALS = 'Docker'
+        DOCKER_IMAGE_NAME = "${MY_REPO}/${env.JOB_NAME.toLowerCase()}:${BUILD_NUMBER}"  // ${MY_REPO}` (which is your Docker Hub username) and the Jenkins job name converted to lowercase
+    }
+     stages {
+        stage('Git Checkout') {
+            steps {
+                // Checkout the Dockerfile and any other necessary files from your repository
+                git branch: 'master', credentialsId: '', url: 'https://github.com/Shahid199578/Jenkins-Docker.git'
+            }
+        }
+        stage ('Maven Build') {
+            
+            steps {
+                
+                sh 'mvn clean package'
+                
+            }
+            
+            post {
+                
+                success {
+                    
+                    archiveArtifacts artifacts: '*/**.war'
+                    
+                }
+            
+            }
+        
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${DOCKER_IMAGE_NAME}", ".")
+                }
+            }
+        }
+        stage('Push to Docker Hub') {
+            steps {
+                // Log in to Docker Hub using the provided credentials
+                script {
+                    docker.withRegistry('', "${DOCKER_HUB_CREDENTIALS}") {
+                        // Push the built image to Docker Hub
+                        docker.image("${DOCKER_IMAGE_NAME}").push()
+                    }
+                }
+            }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    def kubectl = tool 'kubectl'
+                    sh "${kubectl} apply -f kubernetes-deployment.yaml"
+                }
+            }
+        }
+    }
+}
